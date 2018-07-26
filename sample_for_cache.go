@@ -13,10 +13,14 @@ func main() {
 	key1 := "hello world"
 	expiration, _ := time.ParseDuration("6s")
 	cacher.Set("key1", key1, expiration)
-	if val, found := cacher.Get("key1"); found {
-		fmt.Println("Found: ", val)
+	if val, found, err := cacher.Get("key1"); err == nil {
+		if found {
+			fmt.Println("Found: ", val)
+		} else {
+			fmt.Println("Not found item.")
+		}
 	} else {
-		fmt.Println("Not found item.")
+		fmt.Println("Error: ", err)
 	}
 	/*time.Sleep(time.Second * 10)
 
@@ -26,13 +30,26 @@ func main() {
 		fmt.Println("Not found item.")
 	}*/
 
-	cacher.SaveMemToFile("/home/xj/Desktop/mycache.txt")
+	err := cacher.SaveMemToFile("")
+	if err != nil {
+		fmt.Println("Error: ", err)
+		return
+	}
 	time.Sleep(time.Second * 3)
-	cacher.LoadFileToMem("/home/xj/Desktop/mycache.txt")
-	if val, found := cacher.Get("key1"); found {
-		fmt.Println("Found: ", val)
+	err = cacher.LoadFileToMem("")
+	if err != nil {
+		fmt.Println("Error: ", err)
+		return
+	}
+
+	if val, found, err := cacher.Get("key1"); err == nil {
+		if found {
+			fmt.Println("Found: ", val)
+		} else {
+			fmt.Println("Not found item.")
+		}
 	} else {
-		fmt.Println("Not found item.")
+		fmt.Println("Error: ", err)
 	}
 	return
 }

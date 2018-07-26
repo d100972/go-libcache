@@ -21,6 +21,7 @@ package cache
 // 包
 import (
 	"encoding/gob"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -47,6 +48,11 @@ type Cache struct { // 缓存系统结构
 const (
 	NoExpiration      time.Duration = -1 // 永不过期的标志
 	DefaultExpiration time.Duration = 0  // 有默认过期时间的标志
+)
+
+var (
+	ErrKeyInvalid  = errors.New("key invalid.")
+	ErrFileInvalid = errors.New("file name invalid.")
 )
 
 /***************************************************************************************/
@@ -126,8 +132,13 @@ func (thisCache *Cache) gcLoop() {
  * ------------------------------------------------------------------------------------
  * 20180724      v1.0        xj      创建
  * ************************************************************************************/
-func (thisCache *Cache) delete(key string) {
+func (thisCache *Cache) delete(key string) error {
+	if key == "" {
+		err := ErrKeyInvalid
+		return err
+	}
 	delete(thisCache.items, key)
+	return nil
 }
 
 /***************************************************************************************
@@ -181,7 +192,11 @@ func (thisCache *Cache) DeleteExpired() {
  * ------------------------------------------------------------------------------------
  * 20180724      v1.0        xj      创建
  * ************************************************************************************/
-func (thisCache *Cache) set(key string, value interface{}, dur time.Duration) {
+func (thisCache *Cache) set(key string, value interface{}, dur time.Duration) error {
+	if key == "" {
+		err := ErrKeyInvalid
+		return err
+	}
 	var expir int64
 	if dur == DefaultExpiration {
 		dur = thisCache.defaultExpiration
@@ -194,6 +209,7 @@ func (thisCache *Cache) set(key string, value interface{}, dur time.Duration) {
 		Object:     value,
 		Expiration: expir,
 	}
+	return nil
 }
 
 /***************************************************************************************
@@ -207,7 +223,11 @@ func (thisCache *Cache) set(key string, value interface{}, dur time.Duration) {
  * ------------------------------------------------------------------------------------
  * 20180724      v1.0        xj      创建
  * ************************************************************************************/
-func (thisCache *Cache) Set(key string, value interface{}, dur time.Duration) {
+func (thisCache *Cache) Set(key string, value interface{}, dur time.Duration) error {
+	if key == "" {
+		err := ErrKeyInvalid
+		return err
+	}
 	var expir int64
 	if dur == DefaultExpiration {
 		dur = thisCache.defaultExpiration
@@ -222,6 +242,7 @@ func (thisCache *Cache) Set(key string, value interface{}, dur time.Duration) {
 		Object:     value,
 		Expiration: expir,
 	}
+	return nil
 }
 
 /***************************************************************************************
@@ -235,15 +256,19 @@ func (thisCache *Cache) Set(key string, value interface{}, dur time.Duration) {
  * ------------------------------------------------------------------------------------
  * 20180724      v1.0        xj      创建
  * ************************************************************************************/
-func (thisCache *Cache) get(key string) (interface{}, bool) {
+func (thisCache *Cache) get(key string) (interface{}, bool, error) {
+	if key == "" {
+		err := ErrKeyInvalid
+		return nil, false, err
+	}
 	item, found := thisCache.items[key]
 	if !found {
-		return nil, false
+		return nil, false, nil
 	}
 	if item.Expired() {
-		return nil, false
+		return nil, false, nil
 	}
-	return item.Object, found
+	return item.Object, found, nil
 }
 
 /***************************************************************************************
@@ -257,18 +282,23 @@ func (thisCache *Cache) get(key string) (interface{}, bool) {
  * ------------------------------------------------------------------------------------
  * 20180724      v1.0        xj      创建
  * ************************************************************************************/
-func (thisCache *Cache) Get(key string) (interface{}, bool) {
+func (thisCache *Cache) Get(key string) (interface{}, bool, error) {
 	thisCache.mux.RLock()
 	defer thisCache.mux.RUnlock()
 
+	if key == "" {
+		err := ErrKeyInvalid
+		return nil, false, err
+	}
+
 	item, found := thisCache.items[key]
 	if !found {
-		return nil, false
+		return nil, false, nil
 	}
 	if item.Expired() {
-		return nil, false
+		return nil, false, nil
 	}
-	return item.Object, true
+	return item.Object, true, nil
 }
 
 /***************************************************************************************
@@ -284,7 +314,11 @@ func (thisCache *Cache) Get(key string) (interface{}, bool) {
  * ************************************************************************************/
 func (thisCache *Cache) Add(key string, val interface{}, dur time.Duration) error {
 	thisCache.mux.Lock()
-	_, found := thisCache.get(key)
+	if key == "" {
+		err := ErrKeyInvalid
+		return err
+	}
+	_, found, _ := thisCache.get(key)
 	if found {
 		thisCache.mux.Unlock()
 		return fmt.Errorf("Item %s already exists", key)
@@ -307,7 +341,11 @@ func (thisCache *Cache) Add(key string, val interface{}, dur time.Duration) erro
  * ************************************************************************************/
 func (thisCache *Cache) Replace(key string, val interface{}, dur time.Duration) error {
 	thisCache.mux.Lock()
-	_, found := thisCache.get(key)
+	if key == "" {
+		err := ErrKeyInvalid
+		return err
+	}
+	_, found, _ := thisCache.get(key)
 	if !found {
 		thisCache.mux.Unlock()
 		return fmt.Errorf("item doesn't exist.", key)
@@ -359,6 +397,10 @@ func (thisCache *Cache) Save(wrt io.Writer) (err error) {
  * 20180725      v1.0        xj      创建
  * ************************************************************************************/
 func (thisCache *Cache) SaveMemToFile(file string) error {
+	if file == "" {
+		err := ErrFileInvalid
+		return err
+	}
 	fp, err := os.Create(file)
 	if err != nil {
 		return err
@@ -412,6 +454,10 @@ func (thisCache *Cache) Load(rd io.Reader) error {
  * 20180725      v1.0        xj      创建
  * ************************************************************************************/
 func (thisCache *Cache) LoadFileToMem(file string) error {
+	if file == "" {
+		err := ErrFileInvalid
+		return err
+	}
 	fp, err := os.Open(file)
 	if err != nil {
 		return err
