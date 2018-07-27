@@ -7,7 +7,7 @@ import (
 )
 
 func main() {
-	defaultExpiration, _ := time.ParseDuration("0.5h")
+	defaultExpiration, _ := time.ParseDuration("0s")
 	gcInterval, _ := time.ParseDuration("5s")
 	cacher := cache.NewCache(defaultExpiration, gcInterval)
 	key1 := "hello world"
@@ -22,6 +22,7 @@ func main() {
 	} else {
 		fmt.Println("Error: ", err)
 	}
+	cacher.GetCacheStat()
 	/*time.Sleep(time.Second * 10)
 
 	if val, found := cacher.Get("key1"); found {

@@ -24,9 +24,12 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"sync"
 	"time"
+
+	"github.com/joho/godotenv"
 )
 
 /***************************************************************************************/
@@ -53,6 +56,7 @@ const (
 var (
 	ErrKeyInvalid  = errors.New("key invalid.")
 	ErrFileInvalid = errors.New("file name invalid.")
+	ErrNewCache    = errors.New("new cache fatal.")
 )
 
 /***************************************************************************************/
@@ -68,14 +72,26 @@ var (
  * ------------------------------------------------------------------------------------
  * 20180724      v1.0        xj      创建
  * ************************************************************************************/
-func NewCache(defaultExpiration, gcInterval time.Duration) *Cache {
+func NewCache(defaultExpiration, gcInterval time.Duration) (*Cache, error) {
+	var err error
+	if defaultExpiration == DefaultExpiration {
+		err = godotenv.Load("src/go-libcache/config.env")
+		return nil, err
+	}
+	if gcInterval < 0 {
+		gcInterval, err = time.ParseDuration("5s")
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+
 	newCache := &Cache{
 		defaultExpiration: defaultExpiration,
 		gcInterval:        gcInterval,
 		items:             map[string]Item{},
 	}
 	go newCache.gcLoop() // 启动缓存项过期回收清理 goroutine
-	return newCache
+	return newCache, nil
 }
 
 /***************************************************************************************
@@ -119,6 +135,23 @@ func (thisCache *Cache) gcLoop() {
 			return
 		}
 	}
+}
+
+/***************************************************************************************
+ * 功能描述：查看Cache状态
+ * 输入参数：无
+ * 输出参数：无
+ * 返 回 值：无
+ * 其他说明：该函数为 Cache 类方法
+ *
+ * 修改日期      版本号      修改人      修改内容
+ * ------------------------------------------------------------------------------------
+ * 20180727      v1.0        xj      创建
+ * ************************************************************************************/
+func (thisCache *Cache) GetCacheStat() {
+	thisCache.mux.RLock()
+	defer thisCache.mux.RUnlock()
+	fmt.Printf("defaultExpiration: %v\tgcInterval: %v\tItem: %v\n", thisCache.defaultExpiration, thisCache.gcInterval, thisCache.items)
 }
 
 /***************************************************************************************
