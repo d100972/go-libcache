@@ -1,15 +1,19 @@
 package main
 
 import (
-	"cache"
 	"fmt"
+	"go-libcache/cache"
 	"time"
 )
 
 func main() {
-	defaultExpiration, _ := time.ParseDuration("0s")
-	gcInterval, _ := time.ParseDuration("5s")
-	cacher := cache.NewCache(defaultExpiration, gcInterval)
+	defaultExpiration, _ := time.ParseDuration("0.2h")
+	gcInterval, _ := time.ParseDuration("10s")
+	cacher, err := cache.NewCache(defaultExpiration, gcInterval)
+	if err != nil {
+		fmt.Println("error: ", err)
+		return
+	}
 	key1 := "hello world"
 	expiration, _ := time.ParseDuration("6s")
 	cacher.Set("key1", key1, expiration)
@@ -31,7 +35,7 @@ func main() {
 		fmt.Println("Not found item.")
 	}*/
 
-	err := cacher.SaveMemToFile("")
+	err = cacher.SaveMemToFile("")
 	if err != nil {
 		fmt.Println("Error: ", err)
 		return

@@ -28,8 +28,6 @@ import (
 	"os"
 	"sync"
 	"time"
-
-	"github.com/joho/godotenv"
 )
 
 /***************************************************************************************/
@@ -74,9 +72,11 @@ var (
  * ************************************************************************************/
 func NewCache(defaultExpiration, gcInterval time.Duration) (*Cache, error) {
 	var err error
-	if defaultExpiration == DefaultExpiration {
-		err = godotenv.Load("src/go-libcache/config.env")
-		return nil, err
+	if defaultExpiration < -1 {
+		defaultExpiration, err = time.ParseDuration("0.5h")
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 	if gcInterval < 0 {
 		gcInterval, err = time.ParseDuration("5s")
@@ -381,7 +381,7 @@ func (thisCache *Cache) Replace(key string, val interface{}, dur time.Duration) 
 	_, found, _ := thisCache.get(key)
 	if !found {
 		thisCache.mux.Unlock()
-		return fmt.Errorf("item doesn't exist.", key)
+		return fmt.Errorf("item %v doesn't exist.", key)
 	}
 	thisCache.set(key, val, dur)
 	thisCache.mux.Unlock()
