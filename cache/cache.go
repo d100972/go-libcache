@@ -23,6 +23,7 @@ import (
 	"encoding/gob"
 	"errors"
 	"fmt"
+	"hash/crc32"
 	"io"
 	"log"
 	"os"
@@ -44,6 +45,11 @@ type Cache struct { // 缓存系统结构
 	mux               sync.RWMutex    // 读写锁
 	gcInterval        time.Duration   // 过期数据项清理周期
 	stopGc            chan bool       // 是否停止缓存回收清理
+}
+
+type KeyValue struct { //计算hash
+	key    string // hash key
+	cacher *Cache // Cache
 }
 
 const (
@@ -113,6 +119,32 @@ func (thisItem Item) Expired() bool {
 }
 
 /***************************************************************************************
+ * 功能描述：设置key值，并计算成hash
+ * 输入参数：key string 用户输入的key
+ * 输出参数：hashKey hash计算后的key
+ * 返 回 值：hashKey 和 err
+ * 其他说明：该函数为 Cache 类方法
+ *
+ * 修改日期      版本号      修改人      修改内容
+ * ------------------------------------------------------------------------------------
+ * 20180728      v1.0        xj          创建
+ * ************************************************************************************/
+func (thisCache *Cache) SetKey(key string) (hashKey string, err error) {
+	thisCache.mux.Lock()
+	thisCache.mux.Unlock()
+
+	if len(key) == 0 {
+		err = ErrKeyInvalid
+		return "ErrKey", err
+	}
+	crcTable := crc32.MakeTable(crc32.IEEE)
+	hashval := crc32.Checksum([]byte(key), crcTable)
+	index := int(hashval) % 10 // 非分布式，随意取一个值:10
+	hashKey = string(index)
+	return hashKey, nil
+}
+
+/***************************************************************************************
  * 功能描述：过期缓存数据项回收清理
  * 输入参数：无
  * 输出参数：无
@@ -166,7 +198,7 @@ func (thisCache *Cache) GetCacheStat() {
  * 20180724      v1.0        xj      创建
  * ************************************************************************************/
 func (thisCache *Cache) delete(key string) error {
-	if key == "" {
+	if len(key) == 0 {
 		err := ErrKeyInvalid
 		return err
 	}
@@ -226,7 +258,7 @@ func (thisCache *Cache) DeleteExpired() {
  * 20180724      v1.0        xj      创建
  * ************************************************************************************/
 func (thisCache *Cache) set(key string, value interface{}, dur time.Duration) error {
-	if key == "" {
+	if len(key) == 0 {
 		err := ErrKeyInvalid
 		return err
 	}
@@ -257,7 +289,7 @@ func (thisCache *Cache) set(key string, value interface{}, dur time.Duration) er
  * 20180724      v1.0        xj      创建
  * ************************************************************************************/
 func (thisCache *Cache) Set(key string, value interface{}, dur time.Duration) error {
-	if key == "" {
+	if len(key) == 0 {
 		err := ErrKeyInvalid
 		return err
 	}
@@ -290,7 +322,7 @@ func (thisCache *Cache) Set(key string, value interface{}, dur time.Duration) er
  * 20180724      v1.0        xj      创建
  * ************************************************************************************/
 func (thisCache *Cache) get(key string) (interface{}, bool, error) {
-	if key == "" {
+	if len(key) == 0 {
 		err := ErrKeyInvalid
 		return nil, false, err
 	}
@@ -319,7 +351,7 @@ func (thisCache *Cache) Get(key string) (interface{}, bool, error) {
 	thisCache.mux.RLock()
 	defer thisCache.mux.RUnlock()
 
-	if key == "" {
+	if len(key) == 0 {
 		err := ErrKeyInvalid
 		return nil, false, err
 	}
@@ -347,7 +379,7 @@ func (thisCache *Cache) Get(key string) (interface{}, bool, error) {
  * ************************************************************************************/
 func (thisCache *Cache) Add(key string, val interface{}, dur time.Duration) error {
 	thisCache.mux.Lock()
-	if key == "" {
+	if len(key) == 0 {
 		err := ErrKeyInvalid
 		return err
 	}
@@ -374,7 +406,7 @@ func (thisCache *Cache) Add(key string, val interface{}, dur time.Duration) erro
  * ************************************************************************************/
 func (thisCache *Cache) Replace(key string, val interface{}, dur time.Duration) error {
 	thisCache.mux.Lock()
-	if key == "" {
+	if len(key) == 0 {
 		err := ErrKeyInvalid
 		return err
 	}
@@ -430,7 +462,7 @@ func (thisCache *Cache) Save(wrt io.Writer) (err error) {
  * 20180725      v1.0        xj      创建
  * ************************************************************************************/
 func (thisCache *Cache) SaveMemToFile(file string) error {
-	if file == "" {
+	if len(file) == 0 {
 		err := ErrFileInvalid
 		return err
 	}
@@ -487,7 +519,7 @@ func (thisCache *Cache) Load(rd io.Reader) error {
  * 20180725      v1.0        xj      创建
  * ************************************************************************************/
 func (thisCache *Cache) LoadFileToMem(file string) error {
-	if file == "" {
+	if len(file) == 0 {
 		err := ErrFileInvalid
 		return err
 	}

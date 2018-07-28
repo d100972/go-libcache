@@ -22,3 +22,19 @@
  * 修 改 人 ：xj  
  * 修改内容 ：config.env.  
 
+
+**2018年7月28日：**    
+  
+ * 修改记录1：对函数的字符串传参(key string 和 file string) 进行了限制上的修改，len(key)若为0，则报错返回。   
+ * 修改日期 ：20180728  
+ * 版 本 号 ：  
+ * 修 改 人 ：xj  
+ * 修改内容 ：func delete,Delete,set,Set,get,Get,Add,Replace,SaveMemToFile,LoadFileToMem.   
+    
+ * 修改记录2：添加SetKey，用户输入的key string 被计算为hash存储。     
+ * 修改日期 ：20180728  
+ * 版 本 号 ：  
+ * 修 改 人 ：xj  
+ * 修改内容 ：增加 func (*Cache) SetKey(...).    
+
+ 
